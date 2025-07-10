@@ -1,7 +1,10 @@
 -module(time_tracking_db).
 
--export([start/0, get_card/1, assign_card/2, log_touch/2, create_user_if_not_exists/1]).
+-export([start/0, get_card/1, assign_card/2, log_touch/2, create_user_if_not_exists/1,
+         get_cards_by_user/1]).
 -export([delete_card/1]).
+-export([delete_all_cards_by_user/1]).
+-export([delete_card_by_id/1]).
 
 start() ->
     pooler:start(),
@@ -111,6 +114,53 @@ delete_card(CardUid) ->
         {ok, 1} ->
             pooler:return_member(pg_pool, Pid, ok),
             ok;
+        {error, Reason} ->
+            pooler:return_member(pg_pool, Pid, fail),
+            {error, Reason}
+    end.
+
+get_cards_by_user(UserId) ->
+    Pid = pooler:take_member(pg_pool),
+    Query = "SELECT card_uid FROM cards WHERE user_id = $1",
+    case epgsql:equery(Pid, Query, [UserId]) of
+        {ok, _Columns, Rows} ->
+            pooler:return_member(pg_pool, Pid, ok),
+            case Rows of
+                [] ->
+                    {error, not_found};
+                _ ->
+                    {ok, [CardUid || {CardUid} <- Rows]}
+            end;
+        {error, Reason} ->
+            pooler:return_member(pg_pool, Pid, fail),
+            {error, Reason}
+    end.
+
+delete_all_cards_by_user(UserId) ->
+    Pid = pooler:take_member(pg_pool),
+    Query = "DELETE FROM cards WHERE user_id = $1",
+    case epgsql:equery(Pid, Query, [UserId]) of
+        {ok, 0} ->
+            pooler:return_member(pg_pool, Pid, ok),
+            {error, not_found};
+        {ok, _} ->
+            pooler:return_member(pg_pool, Pid, ok),
+            ok;
+        {error, Reason} ->
+            pooler:return_member(pg_pool, Pid, fail),
+            {error, Reason}
+    end.
+
+delete_card_by_id(CardUid) ->
+    Pid = pooler:take_member(pg_pool),
+    Query = "DELETE FROM cards WHERE card_uid = $1 RETURNING user_id",
+    case epgsql:equery(Pid, Query, [CardUid]) of
+        {ok, 0} ->
+            pooler:return_member(pg_pool, Pid, ok),
+            {error, not_found};
+        {ok, [{UserId}]} ->
+            pooler:return_member(pg_pool, Pid, ok),
+            {ok, UserId};
         {error, Reason} ->
             pooler:return_member(pg_pool, Pid, fail),
             {error, Reason}

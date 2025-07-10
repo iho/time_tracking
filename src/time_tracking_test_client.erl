@@ -2,6 +2,9 @@
 
 -export([send_request/3]).
 -export([card_touch_test/0, card_assign_test/0, card_delete_test/0]).
+-export([get_all_cards_test/0]).
+-export([delete_all_cards_by_user_test/0]).
+-export([delete_card_by_id_test/0]).
 
 -include_lib("amqp_client/include/amqp_client.hrl").
 
@@ -114,6 +117,58 @@ card_delete(#{<<"card_uid">> := CardUid}) ->
 card_delete_test() ->
     CardUid = <<"352eab45-50e1-445a-b0f7-82d7cd5c7d91">>,
     case card_delete(#{<<"card_uid">> => CardUid}) of
+        {ok, Response} ->
+            io:format("Card deleted successfully: ~p~n", [Response]);
+        {error, Reason} ->
+            io:format("Failed to delete card: ~p~n", [Reason])
+    end.
+
+
+
+get_all_cards(UserId) ->
+    Params = #{<<"user_id">> => UserId},
+    send_request(<<"/card/list">>, Params, <<"time_tracking_reply_queue">>).
+
+get_all_cards_test() ->
+    UserId = 123, % Example user ID for testing
+    time_tracking_db:create_user_if_not_exists(UserId),
+    % Assign some cards to the users for testing
+    time_tracking_db:assign_card(UserId, <<"42465efc-fba7-4fdf-b24b-b6f5cd0e5fa6">>),
+    time_tracking_db:assign_card(UserId, <<"42465efc-fba7-4fdf-b24b-b6f5cd0e5fa5">>),
+
+    
+    case get_all_cards(UserId) of
+        {ok, Response} ->
+            io:format("Cards for user ~p: ~p~n", [UserId, Response]);
+        {error, Reason} ->
+            io:format("Failed to get cards: ~p~n", [Reason])
+    end.
+
+delete_all_cards_by_user(UserId) ->
+    Params = #{<<"user_id">> => UserId},
+    send_request(<<"/card/delete_all_by_user">>, Params, <<"time_tracking_reply_queue">>).
+
+delete_all_cards_by_user_test() ->
+    UserId = 123, % Example user ID for testing
+    case delete_all_cards_by_user(UserId) of
+        {ok, Response} ->
+            io:format("All cards deleted for user ~p: ~p~n", [UserId, Response]);
+        {error, Reason} ->
+            io:format("Failed to delete all cards for user ~p: ~p~n ", [UserId, Reason])
+    end.
+
+
+
+delete_card_by_id(CardUid) ->
+    Params = #{<<"card_uid">> => CardUid},
+    send_request(<<"/card/delete">>, Params, <<"time_tracking_reply_queue">>).
+
+delete_card_by_id_test() ->
+    CardUid = <<"352eab45-50e1-445a-b0f7-82d7cd5c7d91">>,
+
+    card_assign(#{<<"card_uid">> => CardUid, <<"user_id">> => 123}),
+
+    case delete_card_by_id(CardUid) of
         {ok, Response} ->
             io:format("Card deleted successfully: ~p~n", [Response]);
         {error, Reason} ->

@@ -68,5 +68,39 @@ handle_request(<<"/card/delete">>, Params) ->
         {error, Reason} ->
             #{error => Reason}
     end;
+
+
+handle_request(<<"/card/list">>, #{<<"user_id">> := UserId}) ->
+    case time_tracking_logic:get_all_cards_by_user(UserId) of
+        {error, Reason} ->
+            #{error => Reason};
+        Other ->
+            Other
+    end;
+
+
+handle_request(<<"/card/list">>, _) ->
+    #{error => <<"Invalid parameters">>};
+
+handle_request(<<"/card/delete_all_by_user">>, #{<<"user_id">> := UserId}) ->
+    case time_tracking_logic:delete_all_cards_by_user(UserId) of
+        Map ->
+            Map;
+        {error, Reason} ->
+            #{error => Reason}
+    end;
+handle_request(<<"/card/delete_all_by_user">>, _) ->
+    #{error => <<"Invalid parameters">>};
+
+
+handle_request(<<"/card/delete">>, #{<<"card_uid">> := CardUid}) ->
+    case time_tracking_logic:delete_card_by_id(CardUid) of
+        {ok, UserId} ->
+            #{card_uid => CardUid, user_id => UserId};
+        {error, Reason} ->
+            #{error => Reason}
+    end;
+
+
 handle_request(_, _) ->
     #{error => <<"Unknown method">>}.

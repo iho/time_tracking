@@ -5,6 +5,7 @@
 -export([get_all_cards_by_user/1]).
 -export([delete_card_by_id/1]).
 -export([set_worktime/1]).
+-export([get_worktime_by_userid/1]).
 
 card_touch(#{card_uid := CardUid}) ->
     case time_tracking_db:get_card(CardUid) of
@@ -64,6 +65,14 @@ set_worktime(#{user_id := UserId, start_time := StartTime, end_time := EndTime, 
         ok ->
             #{user_id => UserId, start_time => StartTime,
               end_time => EndTime, days => Days, free_schedule => FreeSchedule};
+        {error, Reason} ->
+            #{error => Reason}
+    end.
+
+get_worktime_by_userid(UserId) ->
+    case time_tracking_db:get_worktime_by_userid(UserId) of
+        {ok, Worktime} ->
+            {ok, Worktime};
         {error, Reason} ->
             #{error => Reason}
     end.

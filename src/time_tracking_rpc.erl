@@ -68,8 +68,6 @@ handle_request(<<"/card/delete">>, Params) ->
         {error, Reason} ->
             #{error => Reason}
     end;
-
-
 handle_request(<<"/card/list">>, #{<<"user_id">> := UserId}) ->
     case time_tracking_logic:get_all_cards_by_user(UserId) of
         {error, Reason} ->
@@ -77,11 +75,8 @@ handle_request(<<"/card/list">>, #{<<"user_id">> := UserId}) ->
         Other ->
             Other
     end;
-
-
 handle_request(<<"/card/list">>, _) ->
     #{error => <<"Invalid parameters">>};
-
 handle_request(<<"/card/delete_all_by_user">>, #{<<"user_id">> := UserId}) ->
     case time_tracking_logic:delete_all_cards_by_user(UserId) of
         Map ->
@@ -91,8 +86,6 @@ handle_request(<<"/card/delete_all_by_user">>, #{<<"user_id">> := UserId}) ->
     end;
 handle_request(<<"/card/delete_all_by_user">>, _) ->
     #{error => <<"Invalid parameters">>};
-
-
 handle_request(<<"/card/delete">>, #{<<"card_uid">> := CardUid}) ->
     case time_tracking_logic:delete_card_by_id(CardUid) of
         {ok, UserId} ->
@@ -100,15 +93,23 @@ handle_request(<<"/card/delete">>, #{<<"card_uid">> := CardUid}) ->
         {error, Reason} ->
             #{error => Reason}
     end;
-
-
-handle_request(<<"/worktime/set">>, Params) ->
+handle_request(<<"/work_time/set">>, Params) ->
     case time_tracking_validator:validate_worktime_set(Params) of
         {ok, Validated} ->
             time_tracking_logic:set_worktime(Validated);
         {error, Reason} ->
             #{error => Reason}
     end;
+handle_request(<<"/work_time/get">>, #{<<"user_id">> := UserId}) ->
+    case time_tracking_logic:get_worktime_by_userid(UserId) of
+        {ok, Worktime} ->
+            #{worktime => Worktime};
+        {error, Reason} ->
+            #{error => Reason}
+    end;
+handle_request(<<"/work_time/get">>, _) ->
+    #{error => <<"Invalid parameters">>};
+
 
 
 handle_request(_, _) ->

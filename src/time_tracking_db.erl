@@ -6,6 +6,7 @@
 -export([delete_all_cards_by_user/1]).
 -export([delete_card_by_id/1]).
 -export([set_worktime/5]).
+-export([get_worktime_by_userid/1]).
 
 start() ->
     pooler:start(),
@@ -178,6 +179,26 @@ set_worktime(UserId, StartTime, EndTime, Days, FreeSchedule) ->
         {ok, 1} ->
             pooler:return_member(pg_pool, Pid, ok),
             ok;
+        {error, Reason} ->
+            pooler:return_member(pg_pool, Pid, fail),
+            {error, Reason}
+    end.
+
+get_worktime_by_userid(UserId) ->
+    Pid = pooler:take_member(pg_pool),
+    Query = "SELECT start_time, end_time, days, free_schedule FROM work_schedules WHERE user_id = $1",
+    case epgsql:equery(Pid, Query, [UserId]) of
+        {ok, _Columns, Rows} ->
+            pooler:return_member(pg_pool, Pid, ok),
+            case Rows of
+                [] ->
+                    {error, not_found};
+                [{StartTime, EndTime, Days, FreeSchedule}] ->
+                    {ok, #{start_time => StartTime,
+                           end_time => EndTime,
+                           days => Days,
+                           free_schedule => FreeSchedule}}
+            end;
         {error, Reason} ->
             pooler:return_member(pg_pool, Pid, fail),
             {error, Reason}

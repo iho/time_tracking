@@ -5,6 +5,7 @@
 -export([get_all_cards_test/0]).
 -export([delete_all_cards_by_user_test/0]).
 -export([delete_card_by_id_test/0]).
+-export([work_time_set_test/0]).
 
 -include_lib("amqp_client/include/amqp_client.hrl").
 
@@ -45,7 +46,7 @@ send_request(Method, Params, ReplyQueue) ->
         #{<<"method">> => Method,
           <<"params">> => Params,
           <<"reply_to">> => ReplyQueue},
-    Payload = jsx:encode(Request),
+    Payload = jsone:encode(Request),
     amqp_channel:cast(Chan,
                       #'basic.publish'{routing_key =
                                            list_to_binary(application:get_env(time_tracking,
@@ -62,7 +63,7 @@ send_request(Method, Params, ReplyQueue) ->
 receive_response(Chan) ->
     receive
         {#'basic.deliver'{}, #amqp_msg{payload = Payload}} ->
-            Json = jsx:decode(Payload, [return_maps]),
+            Json = jsone:decode(Payload),
             amqp_channel:close(Chan),
             {ok, Json};
         #'basic.consume_ok'{consumer_tag = _Tag} ->
@@ -173,4 +174,27 @@ delete_card_by_id_test() ->
             io:format("Card deleted successfully: ~p~n", [Response]);
         {error, Reason} ->
             io:format("Failed to delete card: ~p~n", [Reason])
+    end.
+
+
+work_time_set(#{<<"user_id">> := UserId, <<"start_time">> := StartTime,
+                                      <<"end_time">> := EndTime, <<"days">> := Days,
+                                      <<"free_schedule">> := FreeSchedule}) ->
+    Params = #{<<"user_id">> => UserId, <<"start_time">> => StartTime,
+               <<"end_time">> => EndTime, <<"days">> => Days,
+               <<"free_schedule">> => FreeSchedule},
+    send_request(<<"/worktime/set">>, Params, <<"time_tracking_reply_queue">>).
+work_time_set_test() ->
+    UserId = 123, % Example user ID for testing
+    StartTime = <<"09:00:00">>, % 9:00 AM as a simple time string
+    EndTime = <<"17:00:00">>, % 5:00 PM as a simple time string
+    Days = [0, 1, 2, 3, 4], % Monday to Friday
+    FreeSchedule = false,
+    case work_time_set(#{<<"user_id">> => UserId, <<"start_time">> => StartTime,
+                         <<"end_time">> => EndTime, <<"days">> => Days,
+                         <<"free_schedule">> => FreeSchedule}) of
+        {ok, Response} ->
+            io:format("Worktime set successfully for user ~p: ~p~n", [UserId, Response]);
+        {error, Reason} ->
+            io:format("Failed to set worktime for user ~p: ~p~n", [UserId, Reason])
     end.

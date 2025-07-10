@@ -9,7 +9,7 @@
                   amqp_client,
                   pooler,
                   epgsql,
-                  jsx,
+                  jsone,
                   lager
                  ]},
   {mod, {time_tracking_app, []}},

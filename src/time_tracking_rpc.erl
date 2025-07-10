@@ -33,13 +33,13 @@ handle_cast(_Msg, State) ->
 
 handle_info({#'basic.deliver'{delivery_tag = Tag}, #amqp_msg{payload = Payload}},
             State = #{channel := Chan}) ->
-    lager:debug("Received message: ~p", [Payload]),
-    Json = jsx:decode(Payload),
-    lager:debug("Decoded JSON: ~p", [Json]),
+    lager:info("Received message: ~p", [Payload]),
+    Json = jsone:decode(Payload),
+    lager:info("Decoded JSON: ~p", [Json]),
     Response = handle_request(maps:get(<<"method">>, Json), maps:get(<<"params">>, Json)),
     amqp_channel:cast(Chan,
                       #'basic.publish'{routing_key = maps:get(<<"reply_to">>, Json)},
-                      #amqp_msg{payload = jsx:encode(Response)}),
+                      #amqp_msg{payload = jsone:encode(Response)}),
     amqp_channel:cast(Chan, #'basic.ack'{delivery_tag = Tag}),
     {noreply, State};
 handle_info(#'basic.consume_ok'{}, State) ->
@@ -97,6 +97,15 @@ handle_request(<<"/card/delete">>, #{<<"card_uid">> := CardUid}) ->
     case time_tracking_logic:delete_card_by_id(CardUid) of
         {ok, UserId} ->
             #{card_uid => CardUid, user_id => UserId};
+        {error, Reason} ->
+            #{error => Reason}
+    end;
+
+
+handle_request(<<"/worktime/set">>, Params) ->
+    case time_tracking_validator:validate_worktime_set(Params) of
+        {ok, Validated} ->
+            time_tracking_logic:set_worktime(Validated);
         {error, Reason} ->
             #{error => Reason}
     end;

@@ -5,6 +5,7 @@
 -export([delete_card/1]).
 -export([delete_all_cards_by_user/1]).
 -export([delete_card_by_id/1]).
+-export([set_worktime/5]).
 
 start() ->
     pooler:start(),
@@ -161,6 +162,22 @@ delete_card_by_id(CardUid) ->
         {ok, [{UserId}]} ->
             pooler:return_member(pg_pool, Pid, ok),
             {ok, UserId};
+        {error, Reason} ->
+            pooler:return_member(pg_pool, Pid, fail),
+            {error, Reason}
+    end.
+
+set_worktime(UserId, StartTime, EndTime, Days, FreeSchedule) ->
+    Pid = pooler:take_member(pg_pool),
+    Query =
+        "INSERT INTO work_schedules (user_id, start_time, end_time, days, free_schedule) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (user_id) DO UPDATE SET start_time = $2, end_time = $3, days = $4, free_schedule = $5",
+    case epgsql:equery(Pid, Query, [UserId, StartTime, EndTime, Days, FreeSchedule]) of
+        {ok, 0} ->
+            pooler:return_member(pg_pool, Pid, ok),
+            {error, not_logged};
+        {ok, 1} ->
+            pooler:return_member(pg_pool, Pid, ok),
+            ok;
         {error, Reason} ->
             pooler:return_member(pg_pool, Pid, fail),
             {error, Reason}

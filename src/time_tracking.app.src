@@ -7,10 +7,10 @@
                   kernel,
                   stdlib,
                   amqp_client,
+                  pooler,
                   epgsql,
                   jsx,
-                  lager,
-                  pooler
+                  lager
                  ]},
   {mod, {time_tracking_app, []}},
   {env, []}

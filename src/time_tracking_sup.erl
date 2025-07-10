@@ -3,6 +3,8 @@
 -export([start_link/0, init/1]).
 
 start_link() ->
+    lager:info("Starting time_tracking_sup..."),
+    time_tracking_db:start(),
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 init([]) ->

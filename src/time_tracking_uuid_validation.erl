@@ -5,7 +5,6 @@
 is_valid_uuid(Uuid) when is_binary(Uuid) ->
     case byte_size(Uuid) of
         36 ->
-            % Check format using regular expression
             Pattern = <<"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$">>,
             case re:run(Uuid, Pattern, [{capture, none}]) of
                 match ->

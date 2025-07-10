@@ -1,0 +1,29 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    command: >
+      bash -c "rabbitmq-server & 
+               sleep 10 && 
+               rabbitmqadmin declare queue --vhost=/ name=time_tracking_queue durable=true &&
+               wait"
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: time_tracking
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+  # time_tracking:
+  #   build: .
+  #   depends_on:
+  #     - rabbitmq
+  #     - postgres
+  #   environment:
+  #     - RABBITMQ_HOST=rabbitmq
+  #     - POSTGRES_HOST=postgres

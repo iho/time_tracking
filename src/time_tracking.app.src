@@ -1,0 +1,17 @@
+{application, time_tracking,
+ [
+  {description, "Time Tracking Microservice"},
+  {vsn, "0.1.0"},
+  {registered, [time_tracking_sup, time_tracking_rpc]},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  amqp_client,
+                  epgsql,
+                  jsx,
+                  lager,
+                  pooler
+                 ]},
+  {mod, {time_tracking_app, []}},
+  {env, []}
+ ]}.

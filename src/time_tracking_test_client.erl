@@ -7,6 +7,8 @@
 -export([delete_card_by_id_test/0]).
 -export([work_time_set_test/0]).
 -export([work_time_get_test/0]).
+-export([history_by_user/1]).
+-export([history_by_user_test/0]).
 
 -include_lib("amqp_client/include/amqp_client.hrl").
 
@@ -227,4 +229,29 @@ work_time_get_test() ->
             io:format("Failed to get worktime for user ~p: ~p~n", [UserId, ReasonGet])
     end.
 
+history_by_user(UserId) ->
+    Params = #{<<"user_id">> => UserId},
+    send_request(<<"/work_time/history_by_user">>, Params, <<"time_tracking_reply_queue">>).
 
+history_by_user_test() ->
+    UserId = 123,
+    case work_time_set(#{<<"user_id">> => UserId, <<"start_time">> => <<"09:00:00">>,
+                         <<"end_time">> => <<"17:00:00">>, <<"days">> => [0, 1, 2, 3, 4],
+                         <<"free_schedule">> => false}) of
+        {ok, SetResponse} ->
+            io:format("Worktime set successfully for user ~p: ~p~n", [UserId, SetResponse]);
+        {error, SetReason} ->
+            io:format("Failed to set worktime for user ~p: ~p~n", [UserId, SetReason])
+    end,
+
+
+    card_assign(#{<<"card_uid">> => <<"352eab45-50e1-445a-b0f7-82d7cd5c7d91">>, <<"user_id">> => UserId}),  
+    card_touch(#{<<"card_uid">> => <<"352eab45-50e1-445a-b0f7-82d7cd5c7d91">>}),
+    card_touch(#{<<"card_uid">> => <<"352eab45-50e1-445a-b0f7-82d7cd5c7d91">>}),
+
+    case history_by_user(UserId) of
+        {ok, HistoryResponse} ->
+            io:format("Worktime history for user ~p: ~p~n", [UserId, HistoryResponse]);
+        {error, HistoryReason} ->
+            io:format("Failed to get worktime history for user ~p: ~p~n", [UserId, HistoryReason])
+    end.

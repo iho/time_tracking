@@ -126,5 +126,13 @@ handle_request(<<"/work_time/get_exclusions">>, #{<<"user_id">> := UserId}) ->
             #{error => Reason}
     end;
 
+handle_request(<<"/work_time/history_by_user">>, #{<<"user_id">> := UserId}) ->
+    case time_tracking_logic:get_worktime_history_by_userid(UserId) of
+        {ok, History} ->
+            #{history => History};
+        {error, Reason} ->
+            #{error => Reason}
+    end;
+
 handle_request(_, _) ->
     #{error => <<"Unknown method">>}.

@@ -7,6 +7,7 @@
 -export([delete_card_by_id/1]).
 -export([set_worktime/5]).
 -export([get_worktime_by_userid/1]).
+-export([get_worktime_history_by_userid/1]).
 
 start() ->
     pooler:start(),
@@ -88,12 +89,18 @@ log_touch(UserId, CardUid) ->
         "($1, $2, $3)",
     case epgsql:equery(Pid, Query, [UserId, CardUid, EventType]) of
         {ok, 0} ->
+            lager:error("Failed to log touch for UserId: ~p, CardUid: ~p",
+                        [UserId, CardUid]),
             pooler:return_member(pg_pool, Pid, ok),
             {error, not_logged};
         {ok, 1} ->
+            lager:info("Touch logged successfully for UserId: ~p, CardUid: ~p",
+                        [UserId, CardUid]),
             pooler:return_member(pg_pool, Pid, ok),
             ok;
         {error, Reason} ->
+            lager:error("Failed to log touch for UserId: ~p, CardUid: ~p, Reason: ~p",
+                        [UserId, CardUid, Reason]),
             pooler:return_member(pg_pool, Pid, fail),
             {error, Reason}
     end.
@@ -198,6 +205,28 @@ get_worktime_by_userid(UserId) ->
                            end_time => EndTime,
                            days => Days,
                            free_schedule => FreeSchedule}}
+            end;
+        {error, Reason} ->
+            pooler:return_member(pg_pool, Pid, fail),
+            {error, Reason}
+    end.
+
+
+get_worktime_history_by_userid(UserId) ->
+    Pid = pooler:take_member(pg_pool),
+    Query = "SELECT card_uid, touch_time, event_type FROM work_history WHERE user_id = $1 ORDER BY touch_time DESC",
+    case epgsql:equery(Pid, Query, [UserId]) of
+        {ok, _Columns, Rows} ->
+            pooler:return_member(pg_pool, Pid, ok),
+            case Rows of
+                [] ->
+                    {error, not_found};
+                Rows ->
+                    History = [#{card_uid => CardUid,
+                                 touch_time => TouchTime,
+                                 event_type => EventType,
+                                 user_id => UserId} || {CardUid, TouchTime, EventType} <- Rows],
+                    {ok, History}
             end;
         {error, Reason} ->
             pooler:return_member(pg_pool, Pid, fail),

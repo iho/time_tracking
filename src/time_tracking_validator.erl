@@ -4,6 +4,7 @@
 -export([validate_worktime_set/1]).
 -export([is_valid_time/1]).
 -export([binary_to_time/1]).
+-export([validate_add_exclusion/1]).
 
 validate_card_touch(#{<<"card_uid">> := CardUid}) ->
     case time_tracking_uuid_validation:is_valid_uuid(CardUid) of
@@ -89,3 +90,26 @@ is_valid_time(Time) when is_binary(Time) ->
 is_valid_time(Time) ->
     lager:error("Time must be a binary, got ~p", [Time]),
     false.
+
+
+validate_add_exclusion(#{<<"user_id">> := UserId, <<"type_exclusion">> := TypeExclusion,
+                                      <<"start_datetime">> := StartDatetime,
+                                      <<"end_datetime">> := EndDatetime}) ->
+    UserIdValid = is_integer(UserId),
+    TypeExclusionValid = is_binary(TypeExclusion),
+    StartDatetimeValid = time_tracking_time_validation:is_valid_simple_time(StartDatetime),
+    EndDatetimeValid = time_tracking_time_validation:is_valid_simple_time(EndDatetime),
+
+        case {UserIdValid, TypeExclusionValid, StartDatetimeValid, EndDatetimeValid} of
+            {true, true, true, true} ->
+                {ok, #{user_id => UserId, type_exclusion => TypeExclusion,
+                       start_datetime => binary_to_time(StartDatetime),
+                       end_datetime => binary_to_time(EndDatetime)}};
+            _ ->
+                lager:error("Invalid parameters for add exclusion: ~p", [#{user_id => UserId, type_exclusion => TypeExclusion,
+                                                                          start_datetime => StartDatetime,
+                                                                          end_datetime => EndDatetime}]),
+                {error, <<"Invalid parameters for add exclusion">>}
+        end;
+validate_add_exclusion(_) ->
+    {error, <<"Missing or invalid parameters for add exclusion">>}.

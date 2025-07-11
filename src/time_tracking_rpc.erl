@@ -110,7 +110,21 @@ handle_request(<<"/work_time/get">>, #{<<"user_id">> := UserId}) ->
 handle_request(<<"/work_time/get">>, _) ->
     #{error => <<"Invalid parameters">>};
 
+handle_request(<<"/work_time/add_exclusion">>, Params) ->
+    case time_tracking_validator:validate_add_exclusion(Params) of
+        {ok, Validated} ->
+            time_tracking_logic:add_exclusion(Validated);
+        {error, Reason} ->
+            #{error => Reason}
+    end;
 
+handle_request(<<"/work_time/get_exclusions">>, #{<<"user_id">> := UserId}) ->
+    case time_tracking_logic:get_exclusions_by_userid(UserId) of
+        {ok, Exclusions} ->
+            #{exclusions => Exclusions};
+        {error, Reason} ->
+            #{error => Reason}
+    end;
 
 handle_request(_, _) ->
     #{error => <<"Unknown method">>}.
